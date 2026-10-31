@@ -163,3 +163,26 @@ pemalsuan pemilik, perlindungan versi lama, arsip/pemulihan, dan penolakan DELET
 Batas pengujian: browser tanpa login sudah diperiksa. Pengujian database memakai
 dua identitas uji dalam transaksi; alur login dan sinkronisasi melalui akun
 pengguna asli belum diverifikasi karena sesi aplikasi masih logout.
+
+## Mode tanpa form login
+
+Aplikasi memakai Supabase Anonymous Sign-Ins untuk membuat identitas tamu otomatis.
+Pengguna tidak perlu email atau password. Identitas tersimpan pada browser untuk
+origin website yang sama dan dipakai kembali setelah reload. Sesi yang sudah ada
+tidak diganti. Profile dan draft tetap menggunakan RLS berdasarkan auth.uid().
+
+Pengaturan Supabase Authentication → Sign In / Providers → Allow anonymous
+sign-ins telah diaktifkan dengan persetujuan pengguna. Confirm email untuk akun
+email tidak diubah. Tidak ada login, daftar, atau logout pada Profile.
+
+Menghapus data browser, berpindah origin (misalnya localhost ke domain Vercel),
+atau memakai perangkat lain membuat identitas berbeda. Data lama tidak otomatis
+dapat diakses kembali. Draft legacy pada perangkat yang sama dapat diimpor
+secara eksplisit melalui Pulihkan draft perangkat sebelumnya, lalu disinkronkan;
+draft milik identitas lain tidak ikut diimpor.
+
+Pengujian browser langsung: penyimpanan nama/bio, persistensi setelah reload,
+sinkronisasi draft, arsip, pemulihan, dan pembukaan kembali isi draft berhasil tanpa
+form login. Nilai profil uji dikembalikan; satu draft bernama Draft QA penyimpanan
+ditinggalkan di arsip identitas tamu pengujian pada localhost, tanpa menerbitkan
+data ke katalog. Tidak ada perubahan atau penghapusan data katalog selama uji ini.

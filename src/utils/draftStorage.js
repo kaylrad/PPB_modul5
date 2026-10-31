@@ -139,3 +139,26 @@ export const getAllDraftIds = () => getDraftRecords().map(record=>record.id)
 export const clearAllDrafts = () => {
   getAllDraftIds().forEach(deleteDraft)
 }
+
+// Device-only drafts are imported explicitly; another account's drafts are never copied.
+export function getImportableDeviceDrafts(){
+ if(!currentUser()?.is_anonymous)return []
+ const prefix=PREFIX+'device_'+getUserIdentifier()+'_'
+ const records=[]
+ try{
+  for(const key of Object.keys(localStorage)){
+   let id
+   if(key.startsWith(prefix)&&!key.endsWith(TS_SUFFIX))id=key.slice(prefix.length)
+   else if(/^gun_draft_(create|[0-9]+|[0-9a-f-]{36})$/.test(key))id=key.slice(PREFIX.length)
+   if(!id||localStorage.getItem(ownerPrefix()+id))continue
+   const raw=JSON.parse(localStorage.getItem(key)||'null')
+   if(raw)records.push({...raw,id})
+  }
+ }catch{return []}
+ return [...new Map(records.map(r=>[r.id,r])).values()]
+}
+export function importDeviceDrafts(){
+ let imported=0
+ for(const record of getImportableDeviceDrafts())if(cacheDraft(record))imported++
+ return imported
+}

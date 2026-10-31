@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchProfile,saveUserProfile } from '../services/accountProfileService'
-import { useAuth } from '../hooks/useAuth'
+import { useGuestSession,retryGuestSession } from '../hooks/useAuth'
 import { queryClient } from '../config/queryClient'
 function Form({profile,onBack}){
  const [name,setName]=useState(profile.username),[bio,setBio]=useState(profile.bio),[busy,setBusy]=useState(false),[error,setError]=useState('')
@@ -11,8 +11,8 @@ function Form({profile,onBack}){
  {error&&<p role="alert">{error}</p>}<button disabled={busy} className="btn btn--primary">{busy?'Menyimpan…':'Simpan'}</button><button type="button" className="btn btn--outline" onClick={onBack}>Kembali</button></form>
 }
 export default function EditProfilePage({onBack}){
- const user=useAuth(),q=useQuery({queryKey:['profile',user?.id],queryFn:fetchProfile,enabled:!!user})
- if(!user)return <p>Login melalui Profile terlebih dahulu.</p>
+ const {user,loading,error}=useGuestSession(),q=useQuery({queryKey:['profile',user?.id],queryFn:fetchProfile,enabled:!!user})
+ if(!user)return <section><p role={error?'alert':'status'}>{loading?'Menghubungkan profil perangkat…':error||'Sesi perangkat belum siap.'}</p>{!loading&&<button className="btn btn--outline" onClick={retryGuestSession}>Hubungkan kembali</button>}<button className="btn btn--outline" onClick={onBack}>Kembali</button></section>
  if(q.isLoading)return <p>Memuat profil…</p>
  if(q.error)return <p role="alert">{q.error.message}</p>
  return <Form profile={q.data} onBack={onBack}/>

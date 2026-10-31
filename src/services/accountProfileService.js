@@ -3,7 +3,7 @@ export async function fetchProfile(){
  const user=await requireAccount()
  const {data,error}=await accountClient.from('merch_profiles').select('*').eq('id',user.id).maybeSingle()
  if(error)throw new Error(error.message)
- return data||{id:user.id,username:'Member',bio:''}
+ return data||{id:user.id,username:'Shooter',bio:''}
 }
 export async function saveUserProfile(profile){
  const user=await requireAccount(),username=profile.username.trim(),bio=profile.bio.trim()

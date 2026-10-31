@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth, currentUser } from '../../hooks/useAuth'
 import { queryClient } from '../../config/queryClient'
-import { getDraftRecords,cacheDraft } from '../../utils/draftStorage'
+import { getDraftRecords,cacheDraft,getImportableDeviceDrafts,importDeviceDrafts } from '../../utils/draftStorage'
 import { listAccountDrafts,persistAccountDraft,mergeDraftRecords } from '../../services/accountDraftService'
 export default function DraftManager({onNavigate,onCountChange}){
  const user=useAuth(),[revision,setRevision]=useState(0),[busy,setBusy]=useState(false),[message,setMessage]=useState('')
  const remote=useQuery({queryKey:['accountDrafts',user?.id],queryFn:()=>listAccountDrafts(user.id),enabled:!!user})
  const records=mergeDraftRecords(getDraftRecords(true),user?remote.data||[]:[])
+ const importable=getImportableDeviceDrafts()
  const active=records.filter(r=>!r.archivedAt),archived=records.filter(r=>r.archivedAt)
  useEffect(()=>onCountChange?.(active.length),[active.length,onCountChange])
  async function action(fn){setBusy(true);setMessage('');try{await fn();await queryClient.invalidateQueries({queryKey:['accountDrafts']});setRevision(n=>n+1)}catch(error){setMessage(error.message)}finally{setBusy(false)}}
@@ -34,7 +35,8 @@ export default function DraftManager({onNavigate,onCountChange}){
   onNavigate(record.id==='create'?'Create':'Edit',record.id==='create'?undefined:{id:record.id})
  }
  return <div data-revision={revision}>
- <section className="profile-card"><h2>Draft saya</h2><p>{user?'Draft akun dari database dan perangkat ini.':'Draft pada perangkat ini. Login untuk menyimpan ke database.'}</p>
+ <section className="profile-card"><h2>Draft saya</h2><p>{user?'Draft perangkat dari database dan browser ini.':'Draft tetap tersedia di perangkat saat koneksi database belum siap.'}</p>
+ {!!importable.length&&<button className="btn btn--outline" disabled={busy} onClick={()=>{const count=importDeviceDrafts();setRevision(n=>n+1);setMessage(count+' draft perangkat dipulihkan. Sinkronkan untuk menyimpannya ke database.')}}>Pulihkan draft perangkat sebelumnya ({importable.length})</button>}
  {user&&<button className="btn btn--outline" disabled={busy||remote.isLoading} onClick={sync}>{busy?'Memproses…':'Sinkronkan draft ke database'}</button>}
  {remote.isLoading&&user&&<p role="status">Memuat draft database…</p>}
  {remote.error&&<div role="alert"><p>{remote.error.message}</p><button className="btn btn--outline" onClick={()=>remote.refetch()}>Coba lagi</button></div>}

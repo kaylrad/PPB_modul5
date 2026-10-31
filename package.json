@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "test": "node scripts/verify-module5.mjs && node scripts/verify-general-features.mjs",
+    "test": "node scripts/verify-module5.mjs && node scripts/verify-general-features.mjs && node scripts/verify-guest-session.mjs",
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",

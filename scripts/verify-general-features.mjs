@@ -52,8 +52,8 @@ try{
  assert.ok(merged[0].archivedAt)
  console.log('PASS database drafts: RPC save/restore, owner filtering, session-change guard, size limit, newest-version merge')
  client.auth.getUser=async()=>({data:{user:null},error:null})
- await assert.rejects(()=>profiles.fetchProfile(),/login/)
- console.log('PASS profile: owner from session, validation, guest access rejected')
+ await assert.rejects(()=>profiles.fetchProfile(),/Sesi perangkat/)
+ console.log('PASS profile: owner from session, validation, missing session rejected')
  const source=await readFile(new URL('../src/utils/draftStorage.js',import.meta.url),'utf8')
  const isolated=source.replace(/import .*currentUser.*\r?\n/,'const currentUser=()=>globalThis.testOwner\n').replace(/import .*getUserIdentifier.*\r?\n/,'const getUserIdentifier=()=>"device-test"\n')
  const draft=await import('data:text/javascript;base64,'+Buffer.from(isolated).toString('base64'))
@@ -74,5 +74,15 @@ try{
  draft.archiveLocalDraft('create',false)
  assert.equal(draft.loadDraft('create').name,'Private A')
  console.log('PASS local draft archives: hidden from active list, data retained, restoration')
+
+ globalThis.testOwner={id:'guest-C',is_anonymous:true}
+ assert.ok(draft.getImportableDeviceDrafts().some(r=>r.name==='Legacy device draft'))
+ assert.equal(draft.importDeviceDrafts(),1)
+ assert.equal(draft.loadDraft('create').name,'Legacy device draft')
+ assert.equal(draft.getImportableDeviceDrafts().length,0)
+ assert.ok(localStorage.getItem('gun_draft_create'))
+ globalThis.testOwner={id:'A'}
+ assert.equal(draft.loadDraft('create').name,'Private A')
+ console.log('PASS device draft import: explicit anonymous recovery, original retained, other account data excluded')
  console.log('PASS drafts: legacy device data preserved; A/B account isolation; clear own drafts only')
 }finally{client?.auth.stopAutoRefresh();await server.close();delete globalThis.localStorage;delete globalThis.testOwner}
