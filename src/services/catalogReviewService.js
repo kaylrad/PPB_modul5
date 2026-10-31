@@ -48,13 +48,20 @@ export async function voteCatalogReview(review,value,currentValue){
 export async function listArchivedReviews(expectedOwnerId){
  const user=await requireAccount()
  if(expectedOwnerId&&user.id!==expectedOwnerId)throw new Error('Sesi perangkat berubah.')
- const {data,error}=await accountClient.from('catalog_reviews').select('id,item_id,rating,comment,deleted_at').eq('user_id',user.id).not('deleted_at','is',null).order('deleted_at',{ascending:false})
+ const {data,error}=await accountClient.from('catalog_reviews').select('id,item_id,rating,comment,deleted_at,trashed_at').eq('user_id',user.id).not('deleted_at','is',null).order('deleted_at',{ascending:false})
  if(error)throw new Error(error.message)
  return data
 }
 export async function restoreCatalogReview(id){
  const user=await requireAccount()
- const {error}=await accountClient.from('catalog_reviews').update({deleted_at:null,updated_at:new Date().toISOString()}).eq('id',id).eq('user_id',user.id).not('deleted_at','is',null).select().single()
+ const {error}=await accountClient.from('catalog_reviews').update({deleted_at:null,updated_at:new Date().toISOString()}).eq('id',id).eq('user_id',user.id).not('deleted_at','is',null).is('trashed_at',null).select().single()
  if(error)throw new Error(error.code==='23505'?'Anda sudah mempunyai review aktif pada item yang sama. Arsipkan review aktif sebelum memulihkan review ini.':error.message)
+ await invalidate()
+}
+
+export async function setReviewArchiveTrashed(id,trashed){
+ const user=await requireAccount()
+ const {error}=await accountClient.from('catalog_reviews').update({trashed_at:trashed?new Date().toISOString():null,updated_at:new Date().toISOString()}).eq('id',id).eq('user_id',user.id).not('deleted_at','is',null).select().single()
+ if(error)throw new Error(error.message)
  await invalidate()
 }

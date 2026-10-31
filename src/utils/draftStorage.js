@@ -25,7 +25,12 @@ export const saveDraft = (draftData, draftId = 'create') => {
   try {
     const key = `${ownerPrefix()}${draftId}`
     const ts = new Date().toISOString()
-    localStorage.setItem(key, JSON.stringify({ ...draftData, archivedAt: null, savedAt: ts }))
+    const previous = readStoredDraft(draftId)
+    // Preserve deleted versions when the same form starts a new draft.
+    if (previous?.trashedAt && !previous.restoredAt) {
+      if (!cacheDraft(makeDraftTrashCopy({ ...previous, id: draftId }))) return false
+    }
+    localStorage.setItem(key, JSON.stringify({ ...draftData, archivedAt: null, trashedAt: null, restoredAt: null, savedAt: ts }))
     localStorage.setItem(`${key}${TS_SUFFIX}`, ts)
     return true
   } catch {
@@ -49,7 +54,7 @@ const readStoredDraft = (draftId = 'create') => {
 
 export const loadDraft = (id = 'create') => {
  const record=readStoredDraft(id)
- return record?.archivedAt ? null : record
+ return record?.archivedAt || record?.trashedAt || record?.restoredAt ? null : record
 }
 export const cacheDraft = record => {
  try {
@@ -130,7 +135,7 @@ const allStoredIds = () => {
 
 export const getDraftRecords = (includeArchived=false) => allStoredIds()
  .map(id=>({...readStoredDraft(id),id,source:'local'}))
- .filter(record=>includeArchived||!record.archivedAt)
+ .filter(record=>includeArchived||(!record.archivedAt&&!record.trashedAt&&!record.restoredAt))
 export const getAllDraftIds = () => getDraftRecords().map(record=>record.id)
 
 /**
@@ -161,4 +166,9 @@ export function importDeviceDrafts(){
  let imported=0
  for(const record of getImportableDeviceDrafts())if(cacheDraft(record))imported++
  return imported
+}
+
+// A separate ID retains a deleted version when its original form slot is reused.
+export function makeDraftTrashCopy(record){
+ return {...record,id:'trash-'+crypto.randomUUID(),originalDraftId:record.originalDraftId||record.id,restoredAt:null,savedAt:new Date().toISOString()}
 }

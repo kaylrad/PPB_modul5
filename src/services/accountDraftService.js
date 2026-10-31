@@ -18,7 +18,7 @@ export async function persistAccountDraft(record, archivedAt=record.archivedAt||
  const {id:_ignoredId,source:_ignoredSource,...payload}=record
  if(new TextEncoder().encode(JSON.stringify(payload)).length>1048576)throw new Error('Draft melebihi batas 1 MB. Gunakan URL gambar yang sudah diupload.')
  const updatedAt=record.savedAt||new Date().toISOString()
- if(!Number.isFinite(Date.parse(updatedAt))||(archivedAt&&!Number.isFinite(Date.parse(archivedAt))))throw new Error('Waktu draft tidak valid.')
+ if(!Number.isFinite(Date.parse(updatedAt))||(archivedAt&&!Number.isFinite(Date.parse(archivedAt)))||[record.trashedAt,record.restoredAt].some(value=>value&&!Number.isFinite(Date.parse(value))))throw new Error('Waktu draft tidak valid.')
  const {data,error}=await accountClient.rpc('save_account_draft',{
   p_draft_id:id,p_payload:payload,p_archived_at:archivedAt,p_updated_at:updatedAt,
  }).single()

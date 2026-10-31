@@ -1526,3 +1526,5 @@
 .item-share__link { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
 .item-share__link input { width: 100%; min-width: 0; padding: 7px; border: 1px solid var(--line); border-radius: 4px; font: inherit; }
 .item-share [role="status"] { font-size: 12px; }
+
+.profile-record-actions { display: flex; flex-wrap: wrap; gap: 8px; }

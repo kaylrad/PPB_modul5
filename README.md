@@ -182,3 +182,28 @@ menghilangkan akses ke identitas tamu itu. Dua warning lint lama pada
 Pemeriksaan ukuran viewport ponsel belum dapat diverifikasi karena browser uji
 mempertahankan ukuran desktop meskipun override diminta. Tidak ada klaim lulus
 pengujian ponsel khusus untuk perubahan ini.
+
+## Delete draft dan arsip
+
+Profile menyediakan tombol Delete pada draft aktif, arsip draft, arsip katalog
+pribadi dan arsip review. Dialog konfirmasi memindahkan data ke section Sampah
+masing-masing. Pulihkan dari Sampah mengembalikan draft ke daftar/arsip asal,
+atau mengembalikan katalog/review ke arsip sebelum dipulihkan ke daftar aktif.
+Tidak ada penghapusan permanen.
+
+Draft menyimpan `trashedAt` di payload JSON melalui RPC privat yang sama. Saat
+form dipakai untuk draft baru, versi yang sudah di-delete disalin dengan ID
+terpisah agar tetap tersedia di Sampah. Pemulihan versi lama ditolak jika form
+sudah memiliki draft lain; pindahkan draft tersebut ke Sampah terlebih dahulu.
+Salinan lokal hasil autosave tetap membutuhkan sinkronisasi cloud dari Profile.
+
+Migrasi tambahan `supabase/migrations/20261031_profile_trash.sql` menambah kolom
+`trashed_at` pada katalog privat/review serta constraint agar item Sampah tetap
+berstatus arsip. Migrasi sudah diterapkan; tidak mengubah RLS atau privilege.
+Uji langsung `supabase/tests/profile_trash_rls.sql` lulus dengan ROLLBACK fixture:
+retensi payload, isolasi pemilik, pemulihan, dan penolakan item Sampah yang aktif.
+
+Tes browser lulus: Cancel/Delete draft, Delete dari arsip, pulihkan ke arsip,
+pulihkan draft aktif, Delete draft aktif, pemulihan; Delete/restore arsip katalog
+serta review. Item katalog di Sampah tidak muncul di daftar aktif. Seluruh data
+QA dikembalikan ke kondisi arsip semula; katalog sumber tidak diubah.
