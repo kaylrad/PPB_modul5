@@ -1,3 +1,5 @@
+import { useCatalogArchives } from '../hooks/useCatalogArchives'
+import { useGuestSession } from '../hooks/useAuth'
 import { useMemo } from 'react'
 import { Heart, Loader, AlertCircle, ArrowRight } from 'lucide-react'
 import { useFavorites } from '../hooks/useFavorites'
@@ -10,6 +12,8 @@ import GunCard from '../components/gun/GunCard'
  * Supports dual-mode (server API + localStorage fallback).
  */
 export default function FavoritesPage({ onSelectGun, onNavigateCatalog }) {
+  const archives = useCatalogArchives()
+  const session = useGuestSession()
   const { favorites, loading: favLoading, error: favError, refetch } = useFavorites()
   const { guns: apiGuns } = useGuns({ limit: 100 })
 
@@ -61,10 +65,12 @@ export default function FavoritesPage({ onSelectGun, onNavigateCatalog }) {
       }
     })
 
-    return resolved
-  }, [favorites, allKnownGuns])
+    const hidden = new Set((archives.data || []).map(r => r.item_id))
+    return resolved.filter(g => !hidden.has(String(g.id)))
+  }, [favorites, allKnownGuns, archives.data])
 
-  const isLoading = favLoading && favoriteItems.length === 0
+  const isLoading = (favLoading && favoriteItems.length === 0) || session.loading || (!!session.user && archives.isLoading)
+  const archiveError = session.error || archives.error?.message
 
   return (
     <div className="fav-page">
@@ -120,7 +126,8 @@ export default function FavoritesPage({ onSelectGun, onNavigateCatalog }) {
           </div>
         )}
 
-        {favoriteItems.length > 0 && (
+        {archiveError && <p role="alert">Arsip belum dapat dimuat: {archiveError}</p>}
+        {!isLoading && !archiveError && favoriteItems.length > 0 && (
           <ul className="stock">
             {favoriteItems.map((gun) => (
               <GunCard

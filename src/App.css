@@ -1520,3 +1520,9 @@
 }
 
 .profile-card article { padding: 16px 0; border-bottom: 1px solid var(--line); }
+
+/* Share controls keep the generated URL available if clipboard permission fails. */
+.item-share { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; max-width: 100%; }
+.item-share__link { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
+.item-share__link input { width: 100%; min-width: 0; padding: 7px; border: 1px solid var(--line); border-radius: 4px; font: inherit; }
+.item-share [role="status"] { font-size: 12px; }

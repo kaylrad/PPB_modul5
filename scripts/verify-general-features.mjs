@@ -51,6 +51,18 @@ try{
   [{id:'create',savedAt:'2026-10-31T10:00:00Z',archivedAt:'2026-10-31T10:00:00Z'}])
  assert.ok(merged[0].archivedAt)
  console.log('PASS database drafts: RPC save/restore, owner filtering, session-change guard, size limit, newest-version merge')
+ let pages=0
+ client.rest.fetch=async(url)=>{
+  const parsed=new URL(url),offset=Number(parsed.searchParams.get('offset')||0)
+  assert.equal(Number(parsed.searchParams.get('limit')),200)
+  pages++
+  const rows=Array.from({length:offset===0?200:2},(_,i)=>({draft_id:'draft-'+(offset+i),payload:{},updated_at:'2026-10-31T10:00:00Z',archived_at:null}))
+  return new Response(JSON.stringify(rows),{status:200,headers:{'Content-Type':'application/json'}})
+ }
+ const allDrafts=await draftsApi.listAccountDrafts(owner)
+ assert.equal(allDrafts.length,202);assert.equal(pages,2)
+ console.log('PASS draft pagination: all pages loaded beyond the first response')
+
  client.auth.getUser=async()=>({data:{user:null},error:null})
  await assert.rejects(()=>profiles.fetchProfile(),/Sesi perangkat/)
  console.log('PASS profile: owner from session, validation, missing session rejected')

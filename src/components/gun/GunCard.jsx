@@ -1,3 +1,4 @@
+import ItemShare from '../common/ItemShare'
 import FavoriteButton from '../common/FavoriteButton'
 import { formatPrice, truncate } from '../../utils/helpers'
 
@@ -50,6 +51,7 @@ export default function GunCard({ gun, onSelect, onEdit, onDelete }) {
       {/* Floating actions row */}
       <div className="card-actions">
         <FavoriteButton gunId={gun.id || gun.name} />
+        <ItemShare item={gun}/>
 
         {onEdit && (
           <button
@@ -68,10 +70,10 @@ export default function GunCard({ gun, onSelect, onEdit, onDelete }) {
             type="button"
             className="card-act-btn card-act-btn--danger"
             onClick={(e) => { e.stopPropagation(); onDelete(gun) }}
-            aria-label={`Delete ${gun.name}`}
-            title="Delete"
+            aria-label={`Arsipkan ${gun.name}`}
+            title="Arsipkan"
           >
-            🗑️
+            📁
           </button>
         )}
       </div>

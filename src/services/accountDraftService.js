@@ -2,9 +2,14 @@ import { accountClient, requireAccount } from '../config/accountClient'
 export async function listAccountDrafts(expectedOwnerId){
  const user=await requireAccount()
  if(expectedOwnerId&&user.id!==expectedOwnerId)throw new Error('Sesi akun berubah. Silakan muat ulang.')
- const {data,error}=await accountClient.from('account_drafts').select('*').eq('owner_id',user.id).order('updated_at',{ascending:false})
- if(error)throw new Error(error.message)
- return data.map(row=>({...row.payload,id:row.draft_id,savedAt:row.updated_at,archivedAt:row.archived_at,source:'database'}))
+ const rows=[],pageSize=200
+ for(let offset=0;;offset+=pageSize){
+  const {data,error}=await accountClient.from('account_drafts').select('*').eq('owner_id',user.id).order('updated_at',{ascending:false}).order('draft_id').range(offset,offset+pageSize-1)
+  if(error)throw new Error(error.message)
+  rows.push(...data)
+  if(data.length<pageSize)break
+ }
+ return rows.map(row=>({...row.payload,id:row.draft_id,savedAt:row.updated_at,archivedAt:row.archived_at,source:'database'}))
 }
 export async function persistAccountDraft(record, archivedAt=record.archivedAt||null, expectedOwnerId){
  const user=await requireAccount(),id=String(record.id)

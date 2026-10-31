@@ -43,8 +43,8 @@ Endpoint Supabase yang dipakai:
 | Ulasan GET/POST/PATCH/DELETE | `/rest/v1/reviews` |
 | Upload | `/storage/v1/object/guns/<nama-file>` |
 
-Saat API gagal, katalog contoh dan favorit lokal tersedia. Draft dan profil disimpan
-di browser. Upload menggunakan data URL jika bucket tidak dapat diakses, sesuai
+Saat API gagal, katalog contoh dan favorit lokal tersedia. Draft autosave tersimpan di browser dan dapat disinkronkan ke database akun;
+profil nama/bio tersimpan di database akun. Upload menggunakan data URL jika bucket tidak dapat diakses, sesuai
 fallback pada percobaan. Data URL bukan bukti file telah tersimpan di Storage.
 
 Verifikasi otomatis `npm test` memeriksa pembentukan request CRUD, sort,
@@ -103,86 +103,82 @@ build lokal yang berhasil belum membuktikan kedua langkah tersebut selesai.
         └── Contact.jsx
 ```
 
-## Pengembangan fitur umum
+## Fitur tambahan (31 Oktober 2026)
 
-Tema dan API katalog tetap memakai konfigurasi semula. Halaman memakai React.lazy
-dan Suspense; query katalog memakai TanStack Query (staleTime 60 detik, cache
-5 menit), termasuk invalidation setelah request mutasi berhasil.
+Tema gun dan struktur React/Vite/PWA dipertahankan. Tidak ada form login:
+Supabase Anonymous Sign-Ins membuat identitas tamu per origin/browser. Sesi
+existing digunakan kembali. Membersihkan data browser atau berganti domain/
+perangkat membuat identitas berbeda; identitas tamu tidak dipulihkan lintas perangkat.
 
-Profile memiliki navigasi About/Contact, daftar draft, login akun, dan halaman
-Edit Profile terpisah. Link informasi dapat dibagikan melalui #about dan #contact.
-Draft lokal dipisahkan menurut akun login; draft lama tanpa akun hanya tersedia
-pada sesi perangkat semula, tidak otomatis diklaim oleh akun baru.
+| Poin | Implementasi aktif |
+| --- | --- |
+| 1 | Share pada kartu/detail menghasilkan URL `#item/ID`, tombol salin dan kolom URL. Direct link, reload dan navigasi kembali didukung; ID lokal tidak dibagikan. |
+| 2 | React.lazy/Suspense untuk halaman; gambar kartu lazy; ErrorBoundary untuk kegagalan pemuatan. |
+| 3 | TanStack Query: staleTime 60 detik, gcTime 5 menit, deduplikasi request, invalidation setelah perubahan. |
+| 4 | About/Contact hanya di section Informasi pada Profile; URL langsung tetap tersedia. |
+| 5 | Draft lokal dan database digabung menurut versi terbaru, hanya untuk identitas aktif. Seluruh halaman hasil database dimuat. Autosave lokal, sinkronisasi cloud melalui tombol Profile. |
+| 6 | Arsip draft, katalog pribadi dan review tersedia di Profile, dengan pemulihan. Arsip tidak masuk daftar aktif; tidak ada tombol hapus permanen. |
+| 7 | Review baru mendukung create/read/update/soft delete/restore, rating 1–5, thumbs up/down, pembatalan/penggantian vote. Pemilik ditetapkan dari sesi; RLS menolak perubahan milik orang lain dan vote sendiri. |
+| 8 | Edit Profile terpisah menyimpan nama (2–60 karakter) dan bio (maksimal 500) ke database; tampilan Profile diperbarui setelah simpan. |
+| 9 | Cart/checkout WhatsApp untuk transaksi senjata api tidak diimplementasikan. |
 
-Nama dan bio akun disimpan ke tabel merch_profiles di proyek Supabase milik
-pengguna yang sudah dibuat, dengan RLS id=auth.uid(). API katalog praktikum tetap
-terpisah karena akun pengguna tidak mempunyai akses administrasi ke server modul.
+### Database dan batas akses
 
-Konfigurasi tambahan (lokal .env dan Vercel Production/Preview):
+Katalog/favorit/upload lama tetap menggunakan konfigurasi `VITE_API_BASE_URL`
+dan `VITE_SUPABASE_PUBLISHABLE_KEY` dari proyek praktikum. Akun pemilik aplikasi
+tidak mempunyai akses admin proyek sumber itu. Fitur privat memakai proyek
+Supabase sendiri melalui `VITE_ACCOUNT_API_URL` dan `VITE_ACCOUNT_PUBLISHABLE_KEY`.
+Simpan konfigurasi di `.env` dan Vercel Production/Preview; jangan memakai secret
+key, service role key atau database password pada frontend.
 
-- VITE_ACCOUNT_API_URL: URL Supabase akun milik pengguna.
-- VITE_ACCOUNT_PUBLISHABLE_KEY: publishable key proyek akun.
-- Jangan memasukkan secret key atau database password ke frontend.
+Tabel akun: `merch_profiles` (nama backend dipertahankan), `account_drafts`,
+`catalog_archives`, `catalog_reviews`, `catalog_review_votes`. RLS tetap berlaku
+untuk sesi tamu melalui `auth.uid()`. Arsip katalog adalah penanda **pribadi**,
+bukan penghapusan data sumber bersama. ID item menjadi referensi eksternal ke
+API sumber, sehingga tidak ada foreign key lintas proyek Supabase.
 
-Migration akun: supabase/migrations/20261031_account_profiles.sql. Tabel ini telah
-dibuat pada database akun saat persiapan sebelumnya; migration aman untuk proyek
-akun baru dan tidak mengubah tabel katalog.
+Review lama dari server praktikum tetap ditampilkan baca-saja karena pemilik
+identitas lamanya tidak dapat diverifikasi. Review baru tersimpan di database
+sendiri; maksimum satu review aktif per identitas/item. Setiap identitas hanya
+mempunyai satu vote per review, tanpa vote sendiri. Identitas tamu dapat dibuat
+ulang dengan browser baru, sehingga ini bukan sistem anti-Sybil untuk pemungutan
+suara publik. Keamanan RLS membatasi operasi per identitas, bukan per orang.
 
-Pemeriksaan: npm test, npm run lint, npm run build. Pemeriksaan profil otomatis
-menggunakan request mock; login, konfirmasi email, dan penyimpanan profil melalui
-akun pengguna perlu diverifikasi terpisah. Tidak ada TypeScript/typecheck pada
-konfigurasi proyek ini.
+### Migrasi
 
-Pengembangan ini tidak menambahkan share tautan produk, arsip katalog, CRUD/vote
-review tambahan, keranjang, atau checkout pemesanan senjata api.
+- `supabase/migrations/20261031_account_profiles.sql`: profil dan pembatasan pemilik.
+- `supabase/migrations/20261031_account_drafts.sql`: draft privat, RPC sinkronisasi,
+  batas payload 1 MB dan perlindungan terhadap penimpaan versi lebih baru.
+- `supabase/migrations/20261031_catalog_interactions.sql`: tiga tabel baru, indeks,
+  RLS, trigger identitas immutable dan privilege terbatas. Tidak menghapus data
+  katalog lama. Sudah dijalankan dengan persetujuan pengguna; jangan jalankan ulang
+  migration yang sama pada database aktif.
 
-## Draft database dan arsip draft
+`deleted_at` menyembunyikan review, `archived_at` menyembunyikan draft/katalog
+pribadi. Review yang dihapus bisa dipulihkan di Profile → Arsip review saya.
+Jika sudah ada review aktif baru pada item yang sama, arsipkan review aktif
+terlebih dahulu sebelum memulihkan yang lama.
 
-Pada Profile, pengguna yang login dapat menyinkronkan draft perangkat ke tabel
-account_drafts melalui tombol Sinkronkan draft ke database. Autosave pada form
-tetap menyimpan ke perangkat; sinkronisasi database merupakan tindakan terpisah
-yang menampilkan status berhasil atau error. Draft database dapat dibuka pada
-perangkat lain setelah login dengan akun yang sama.
+### Pengujian
 
-Arsipkan draft menandai archived_at pada database sebelum memperbarui perangkat.
-Pulihkan draft mengosongkan penanda tersebut. Data arsip tidak masuk daftar aktif.
-Draft tanpa login hanya diarsipkan pada perangkat. Tidak ada tombol hapus permanen;
-role authenticated juga tidak memperoleh privilege DELETE pada account_drafts.
+`npm test` memeriksa regresi service lama, query cache, sesi tamu, profil,
+draft beserta pagination, URL detail, arsip dan service review/vote dengan mock.
+`npm run lint` dan `npm run build` digunakan untuk pemeriksaan kode dan produksi.
 
-RPC save_account_draft mengambil owner dari auth.uid(), menerapkan RLS,
-membatasi payload 1 MB, dan menolak penimpaan oleh timestamp versi yang lebih lama.
-Aplikasi menolak penggunaan hasil request jika akun berubah saat request berjalan.
-Draft legacy tanpa akun tetap disimpan pada perangkat dan tidak otomatis
-dipindahkan ke akun login.
+Pengujian langsung Supabase: `supabase/tests/account_drafts_rls.sql` dan
+`supabase/tests/catalog_interactions_rls.sql`. Transaksi fixture diakhiri ROLLBACK;
+tidak meninggalkan akun uji. Lulus isolasi pemilik, anti-spoofing, validasi,
+soft delete/restore, identitas immutable, satu vote per identitas, serta
+penolakan DELETE/TRUNCATE pada tabel interaksi baru.
 
-Migration: supabase/migrations/20261031_account_drafts.sql.
-Uji database: supabase/tests/account_drafts_rls.sql. Test dijalankan dalam transaksi
-dan diakhiri ROLLBACK. Hasil langsung di Supabase: PASS untuk isolasi akun,
-pemalsuan pemilik, perlindungan versi lama, arsip/pemulihan, dan penolakan DELETE.
+Pengujian browser lokal: profil/draft tanpa login (pengujian sebelumnya), URL
+detail/copy/share, create/edit/soft delete/restore review, thumbs up/down dan
+toggle dari origin kedua, vote tetap tersimpan setelah reload, serta arsip
+katalog (hilang dari daftar) dan pemulihan. Item sumber tidak diubah; review QA
+tersimpan di arsip pribadi dan vote uji dibatalkan. Penghapusan browser akan
+menghilangkan akses ke identitas tamu itu. Dua warning lint lama pada
+`useFavorites` dan `useReviews` masih ada; tidak ada error lint.
 
-Batas pengujian: browser tanpa login sudah diperiksa. Pengujian database memakai
-dua identitas uji dalam transaksi; alur login dan sinkronisasi melalui akun
-pengguna asli belum diverifikasi karena sesi aplikasi masih logout.
-
-## Mode tanpa form login
-
-Aplikasi memakai Supabase Anonymous Sign-Ins untuk membuat identitas tamu otomatis.
-Pengguna tidak perlu email atau password. Identitas tersimpan pada browser untuk
-origin website yang sama dan dipakai kembali setelah reload. Sesi yang sudah ada
-tidak diganti. Profile dan draft tetap menggunakan RLS berdasarkan auth.uid().
-
-Pengaturan Supabase Authentication → Sign In / Providers → Allow anonymous
-sign-ins telah diaktifkan dengan persetujuan pengguna. Confirm email untuk akun
-email tidak diubah. Tidak ada login, daftar, atau logout pada Profile.
-
-Menghapus data browser, berpindah origin (misalnya localhost ke domain Vercel),
-atau memakai perangkat lain membuat identitas berbeda. Data lama tidak otomatis
-dapat diakses kembali. Draft legacy pada perangkat yang sama dapat diimpor
-secara eksplisit melalui Pulihkan draft perangkat sebelumnya, lalu disinkronkan;
-draft milik identitas lain tidak ikut diimpor.
-
-Pengujian browser langsung: penyimpanan nama/bio, persistensi setelah reload,
-sinkronisasi draft, arsip, pemulihan, dan pembukaan kembali isi draft berhasil tanpa
-form login. Nilai profil uji dikembalikan; satu draft bernama Draft QA penyimpanan
-ditinggalkan di arsip identitas tamu pengujian pada localhost, tanpa menerbitkan
-data ke katalog. Tidak ada perubahan atau penghapusan data katalog selama uji ini.
+Pemeriksaan ukuran viewport ponsel belum dapat diverifikasi karena browser uji
+mempertahankan ukuran desktop meskipun override diminta. Tidak ada klaim lulus
+pengujian ponsel khusus untuk perubahan ini.

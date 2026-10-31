@@ -1,3 +1,5 @@
+import ReviewArchiveManager from '../components/common/ReviewArchiveManager'
+import CatalogArchiveManager from '../components/common/CatalogArchiveManager'
 import DraftManager from '../components/common/DraftManager'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -36,5 +38,7 @@ export default function ProfilePage({onReplaySplash,onNavigate}){
  {sessionError&&<div role="alert"><p>{sessionError}</p><button className="btn btn--outline" onClick={retryGuestSession}>Hubungkan kembali</button></div>}
  <p className="form-hint">Profil terikat pada browser ini. Menghapus data browser atau memakai perangkat lain membuat profil baru.</p>
  <DraftManager onNavigate={onNavigate} onCountChange={setDraftCount}/>
+ <CatalogArchiveManager/>
+ <ReviewArchiveManager/>
  <section className="profile-card"><h2>Informasi</h2><button className="btn btn--outline" onClick={()=>onNavigate('About')}>About</button><button className="btn btn--outline" onClick={()=>onNavigate('Contact')}>Contact</button></section></section>
 }
