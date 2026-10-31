@@ -7,7 +7,14 @@ Vite + Tailwind CSS.
 ## Setup
 
 ```bash
-npm install
+npm ci
+```
+
+Salin `.env.example` menjadi `.env` di folder ini. Konfigurasi contoh menggunakan
+Supabase yang disediakan Modul 5 (PostgreSQL melalui REST API dan Storage).
+Publishable key adalah key untuk frontend; jangan gunakan service role key.
+
+```bash
 npm run dev      # dev server with HMR
 ```
 
@@ -17,7 +24,58 @@ Other scripts:
 npm run build    # production build to dist/
 npm run preview  # serve the production build
 npm run lint     # oxlint
+npm test         # service requests and localStorage draft checks
 ```
+
+## Percobaan Modul 5
+
+Implementasi mencakup konfigurasi Axios dan interceptor, hooks produk/ulasan/favorit,
+services CRUD, upload gambar, profil lokal, pencarian/filter/sort, draft localStorage,
+manifest, service worker, dan tombol pemasangan PWA. Dependensi berada di folder
+repository ini agar instalasi dari GitHub tidak bergantung pada folder induk.
+
+Endpoint Supabase yang dipakai:
+
+| Fitur | Endpoint |
+| --- | --- |
+| Produk GET/POST/PATCH/DELETE | `/rest/v1/products` |
+| Favorit GET/POST/DELETE | `/rest/v1/favorites` |
+| Ulasan GET/POST/PATCH/DELETE | `/rest/v1/reviews` |
+| Upload | `/storage/v1/object/guns/<nama-file>` |
+
+Saat API gagal, katalog contoh dan favorit lokal tersedia. Draft dan profil disimpan
+di browser. Upload menggunakan data URL jika bucket tidak dapat diakses, sesuai
+fallback pada percobaan. Data URL bukan bukti file telah tersimpan di Storage.
+
+Verifikasi otomatis `npm test` memeriksa pembentukan request CRUD, sort,
+favorit, ulasan, dan pemisahan/penghapusan draft menggunakan mock request.
+Pengujian ini tidak mengubah database praktikum bersama.
+
+## Deploy ke Vercel
+
+1. Login ke Vercel dengan GitHub dan import `kaylrad/PPB_modul5`.
+2. Gunakan framework **Vite**, Root Directory **./**, Build Command
+   **npm run build**, dan Output Directory **dist**.
+3. Tambahkan kedua environment variable dari `.env.example` di pengaturan
+   environment Vercel. `.env` lokal tidak diunggah ke GitHub.
+4. Deploy, lalu buka domain HTTPS yang dihasilkan. Jika environment diubah
+   setelah deployment, lakukan redeploy agar Vite membacanya saat build.
+
+## Pemeriksaan akhir di browser dan HP
+
+1. Buka katalog dan pastikan request produk mengarah ke Supabase dan berstatus 200.
+2. Buat satu produk uji, ubah, lalu hapus produk uji itu sendiri. Uji favorit dan
+   ulasan pada produk uji; jangan mengubah data milik praktikan lain.
+3. Simpan draft, muat ulang halaman, lalu pulihkan draft. Periksa profil tetap
+   tersimpan setelah reload.
+4. Pada hasil build/website HTTPS, periksa Manifest dan Service Workers di
+   DevTools. Buka sekali saat online, lalu uji offline dan reload.
+5. Buka URL deployment di HP, pilih **Install app** atau **Add to Home Screen**,
+   lalu jalankan dari ikon di home screen. Simpan screenshot sebagai bukti
+   percobaan deployment dan pemasangan sesuai modul.
+
+Deployment dan pemasangan di perangkat fisik perlu diverifikasi secara terpisah;
+build lokal yang berhasil belum membuktikan kedua langkah tersebut selesai.
 
 ## Structure
 

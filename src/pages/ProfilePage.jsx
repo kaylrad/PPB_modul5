@@ -11,20 +11,14 @@ import {
 } from 'lucide-react'
 import userService from '../services/userService'
 import { useFavorites } from '../hooks/useFavorites'
+import { getAllDraftIds } from '../utils/draftStorage'
 
 /**
  * Get count of active drafts in localStorage
  */
 const getActiveDraftCount = () => {
   try {
-    let count = 0
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (key && (key.startsWith('bore_barrel_draft_') || key.startsWith('recipe_draft_'))) {
-        count++
-      }
-    }
-    return count
+    return getAllDraftIds().length
   } catch {
     return 0
   }
