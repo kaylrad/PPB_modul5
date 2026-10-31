@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, lazy } from 'react'
 import { RefreshCw, Plus, Loader, AlertCircle, PackageOpen } from 'lucide-react'
 import { useGuns } from '../hooks/useGuns'
 import GUNS_LOCAL from '../data/guns'
 import GunCard from '../components/gun/GunCard'
-import GunDetail from '../components/gun/GunDetail'
+const GunDetail=lazy(()=>import('../components/gun/GunDetail'))
 import AdvancedFilter from '../components/common/AdvancedFilter'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import gunService from '../services/gunService'

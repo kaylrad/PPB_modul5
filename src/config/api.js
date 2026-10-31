@@ -1,3 +1,4 @@
+import { queryClient } from './queryClient'
 import axios from 'axios'
 
 // ---------------------------------------------------------------------------
@@ -50,7 +51,12 @@ apiClient.interceptors.request.use(
 // Response interceptor — unwrap response and normalise errors
 // ---------------------------------------------------------------------------
 apiClient.interceptors.response.use(
-  (response) => response.data,
+  (response) => {
+    if (!['get','head','options'].includes(response.config.method)) {
+      queryClient.invalidateQueries({queryKey:['products']})
+    }
+    return response.data
+  },
   (error) => {
     let message = 'An unexpected error occurred'
     let status = null

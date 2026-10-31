@@ -1,3 +1,5 @@
+import { currentUser } from '../hooks/useAuth'
+import { getUserIdentifier } from '../services/userService'
 // ---------------------------------------------------------------------------
 // draftStorage.js — auto-save / restore form drafts via localStorage.
 //
@@ -10,6 +12,7 @@
 // ---------------------------------------------------------------------------
 
 const PREFIX = 'gun_draft_'
+const ownerPrefix = () => PREFIX + (currentUser()?.id || ('device_' + getUserIdentifier())) + '_'
 const TS_SUFFIX = '_ts'
 
 /**
@@ -20,7 +23,7 @@ const TS_SUFFIX = '_ts'
  */
 export const saveDraft = (draftData, draftId = 'create') => {
   try {
-    const key = `${PREFIX}${draftId}`
+    const key = `${ownerPrefix()}${draftId}`
     const ts = new Date().toISOString()
     localStorage.setItem(key, JSON.stringify({ ...draftData, savedAt: ts }))
     localStorage.setItem(`${key}${TS_SUFFIX}`, ts)
@@ -36,8 +39,9 @@ export const saveDraft = (draftData, draftId = 'create') => {
  */
 export const loadDraft = (draftId = 'create') => {
   try {
-    const raw = localStorage.getItem(`${PREFIX}${draftId}`)
-    return raw ? JSON.parse(raw) : null
+    const raw = localStorage.getItem(`${ownerPrefix()}${draftId}`)
+    const legacy = !currentUser() ? localStorage.getItem(PREFIX + draftId) : null
+    return raw ? JSON.parse(raw) : legacy ? JSON.parse(legacy) : null
   } catch {
     return null
   }
@@ -48,7 +52,7 @@ export const loadDraft = (draftId = 'create') => {
  */
 export const deleteDraft = (draftId = 'create') => {
   try {
-    const key = `${PREFIX}${draftId}`
+    const key = `${ownerPrefix()}${draftId}`
     localStorage.removeItem(key)
     localStorage.removeItem(`${key}${TS_SUFFIX}`)
     return true
@@ -62,7 +66,7 @@ export const deleteDraft = (draftId = 'create') => {
  */
 export const hasDraft = (draftId = 'create') => {
   try {
-    return localStorage.getItem(`${PREFIX}${draftId}`) !== null
+    return loadDraft(draftId) !== null
   } catch {
     return false
   }
@@ -73,7 +77,7 @@ export const hasDraft = (draftId = 'create') => {
  */
 export const getDraftTimestamp = (draftId = 'create') => {
   try {
-    return localStorage.getItem(`${PREFIX}${draftId}${TS_SUFFIX}`)
+    return localStorage.getItem(`${ownerPrefix()}${draftId}${TS_SUFFIX}`)
   } catch {
     return null
   }
@@ -100,9 +104,14 @@ export const formatDraftTime = (timestamp) => {
  */
 export const getAllDraftIds = () => {
   try {
-    return Object.keys(localStorage)
-      .filter((k) => k.startsWith(PREFIX) && !k.endsWith(TS_SUFFIX))
-      .map((k) => k.slice(PREFIX.length))
+    const owned = Object.keys(localStorage)
+      .filter(k => k.startsWith(ownerPrefix()) && !k.endsWith(TS_SUFFIX))
+      .map(k => k.slice(ownerPrefix().length))
+    if (currentUser()) return owned
+    const legacy = Object.keys(localStorage)
+      .filter(k => /^gun_draft_(create|[0-9]+|[0-9a-f-]{36})$/.test(k))
+      .map(k => k.slice(PREFIX.length))
+    return [...new Set([...owned,...legacy])]
   } catch {
     return []
   }

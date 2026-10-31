@@ -102,6 +102,7 @@ export default function CreateGunPage({ onBack, onSuccess }) {
       if (draft.formData) setFormData(draft.formData)
       if (draft.specs) setSpecs(draft.specs)
       if (draft.steps) setSteps(draft.steps)
+      setCurrentStep('form')
       if (draft.uploadedImageUrl) {
         setUploadedImageUrl(draft.uploadedImageUrl)
         setImagePreview(draft.uploadedImageUrl)

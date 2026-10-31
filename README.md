@@ -102,3 +102,36 @@ build lokal yang berhasil belum membuktikan kedua langkah tersebut selesai.
         ├── About.jsx
         └── Contact.jsx
 ```
+
+## Pengembangan fitur umum
+
+Tema dan API katalog tetap memakai konfigurasi semula. Halaman memakai React.lazy
+dan Suspense; query katalog memakai TanStack Query (staleTime 60 detik, cache
+5 menit), termasuk invalidation setelah request mutasi berhasil.
+
+Profile memiliki navigasi About/Contact, daftar draft, login akun, dan halaman
+Edit Profile terpisah. Link informasi dapat dibagikan melalui #about dan #contact.
+Draft lokal dipisahkan menurut akun login; draft lama tanpa akun hanya tersedia
+pada sesi perangkat semula, tidak otomatis diklaim oleh akun baru.
+
+Nama dan bio akun disimpan ke tabel merch_profiles di proyek Supabase milik
+pengguna yang sudah dibuat, dengan RLS id=auth.uid(). API katalog praktikum tetap
+terpisah karena akun pengguna tidak mempunyai akses administrasi ke server modul.
+
+Konfigurasi tambahan (lokal .env dan Vercel Production/Preview):
+
+- VITE_ACCOUNT_API_URL: URL Supabase akun milik pengguna.
+- VITE_ACCOUNT_PUBLISHABLE_KEY: publishable key proyek akun.
+- Jangan memasukkan secret key atau database password ke frontend.
+
+Migration akun: supabase/migrations/20261031_account_profiles.sql. Tabel ini telah
+dibuat pada database akun saat persiapan sebelumnya; migration aman untuk proyek
+akun baru dan tidak mengubah tabel katalog.
+
+Pemeriksaan: npm test, npm run lint, npm run build. Pemeriksaan profil otomatis
+menggunakan request mock; login, konfirmasi email, dan penyimpanan profil melalui
+akun pengguna perlu diverifikasi terpisah. Tidak ada TypeScript/typecheck pada
+konfigurasi proyek ini.
+
+Pengembangan ini tidak menambahkan share tautan produk, arsip katalog, CRUD/vote
+review tambahan, keranjang, atau checkout pemesanan senjata api.

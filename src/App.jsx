@@ -1,23 +1,25 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense, useEffect } from 'react'
 import Header from './components/Header.jsx'
 import Footer from './components/Footer.jsx'
-import Catalog from './pages/Catalog.jsx'
-import FavoritesPage from './pages/FavoritesPage.jsx'
-import ProfilePage from './pages/ProfilePage.jsx'
-import CreateGunPage from './pages/CreateGunPage.jsx'
-import EditGunPage from './pages/EditGunPage.jsx'
-import GunDetail from './components/gun/GunDetail.jsx'
-import About from './pages/About.jsx'
-import Contact from './pages/Contact.jsx'
+const Catalog=lazy(()=>import('./pages/Catalog.jsx'))
+const FavoritesPage=lazy(()=>import('./pages/FavoritesPage.jsx'))
+const ProfilePage=lazy(()=>import('./pages/ProfilePage.jsx'))
+const CreateGunPage=lazy(()=>import('./pages/CreateGunPage.jsx'))
+const EditGunPage=lazy(()=>import('./pages/EditGunPage.jsx'))
+const GunDetail=lazy(()=>import('./components/gun/GunDetail.jsx'))
+const About=lazy(()=>import('./pages/About.jsx'))
+const Contact=lazy(()=>import('./pages/Contact.jsx'))
 import PWABadge from './components/PWABadge.jsx'
 import ConfirmModal from './components/modals/ConfirmModal.jsx'
 import SplashScreen from './components/common/SplashScreen.jsx'
 import gunService from './services/gunService.js'
 import './App.css'
 
+const EditProfilePage=lazy(()=>import('./pages/EditProfilePage.jsx'))
 function App() {
   const [showSplash, setShowSplash] = useState(true)
-  const [tab, setTab] = useState('Catalog')
+  const [tab, setTab] = useState(() => window.location.hash==='#about'?'About':window.location.hash==='#contact'?'Contact':'Catalog')
+  useEffect(()=>{const handler=()=>{if(window.location.hash==='#about')setTab('About');if(window.location.hash==='#contact')setTab('Contact')};window.addEventListener('hashchange',handler);return()=>window.removeEventListener('hashchange',handler)},[])
   const [mode, setMode] = useState('list') // 'list' | 'create' | 'edit' | 'detail'
   const [selectedGun, setSelectedGun] = useState(null)
   const [editingGun, setEditingGun] = useState(null)
@@ -65,7 +67,7 @@ function App() {
         onNavigateCreate={() => handleNavigate('Create')}
       />
 
-      <main className="main">
+      <main className="main"><Suspense fallback={<p role="status">Memuat halaman…</p>}>
         {/* Sub-page views */}
         {mode === 'create' && (
           <CreateGunPage
@@ -113,13 +115,14 @@ function App() {
               />
             )}
             {tab === 'Profile' && (
-              <ProfilePage onReplaySplash={() => setShowSplash(true)} />
+              <ProfilePage onNavigate={handleNavigate} onReplaySplash={() => setShowSplash(true)} />
             )}
+            {tab === 'EditProfile' && <EditProfilePage onBack={()=>setTab('Profile')}/>}
             {tab === 'About' && <About />}
             {tab === 'Contact' && <Contact />}
           </>
         )}
-      </main>
+      </Suspense></main>
 
       {/* Global Delete Confirmation */}
       <ConfirmModal

@@ -1,12 +1,2 @@
-function Contact() {
-  return (
-    <div className="page">
-      <h1 className="display">Come by the shop.</h1>
-      <p className="lede">
-        123 Range Road. Open Tuesday to Saturday, 10 to 6. Call (555) 010-0100.
-      </p>
-    </div>
-  )
-}
-
-export default Contact
+import InfoShare from '../components/common/InfoShare'
+export default function Contact(){return <section className="page"><h1 className="display">Kontak pengelola</h1><p className="lede">Untuk pertanyaan atau laporan kendala aplikasi, hubungi pengelola proyek melalui kanal komunikasi praktikum yang telah disepakati.</p><InfoShare page="contact"/></section>}

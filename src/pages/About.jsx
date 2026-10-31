@@ -1,13 +1,2 @@
-function About() {
-  return (
-    <div className="page">
-      <h1 className="display">A one-room armory.</h1>
-      <p className="lede">
-        Bore &amp; Barrel sells a short, honest list of firearms. Each piece is priced
-        from the bench — no markup theatre, no filler.
-      </p>
-    </div>
-  )
-}
-
-export default About
+import InfoShare from '../components/common/InfoShare'
+export default function About(){return <section className="page"><h1 className="display">Tentang proyek</h1><p className="lede">Bore &amp; Barrel adalah proyek praktikum Progressive Web App berbasis React. Proyek ini mempelajari navigasi halaman, pemuatan data melalui API, penyimpanan draft, dan pengelolaan profil pengguna.</p><InfoShare page="about"/></section>}

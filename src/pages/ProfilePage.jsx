@@ -1,208 +1,54 @@
 import { useState } from 'react'
-import {
-  Shield,
-  Copy,
-  Check,
-  Save,
-  Heart,
-  FileText,
-  Camera,
-  Play,
-} from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { Shield, Camera, Play } from 'lucide-react'
+import { accountClient } from '../config/accountClient'
+import { useAuth } from '../hooks/useAuth'
+import { fetchProfile } from '../services/accountProfileService'
 import userService from '../services/userService'
+import { getAllDraftIds,loadDraft } from '../utils/draftStorage'
 import { useFavorites } from '../hooks/useFavorites'
-import { getAllDraftIds } from '../utils/draftStorage'
-
-/**
- * Get count of active drafts in localStorage
- */
-const getActiveDraftCount = () => {
-  try {
-    return getAllDraftIds().length
-  } catch {
-    return 0
-  }
-}
-
-/**
- * ProfilePage — User identity and Armory settings.
- * Manages operator profile, identifier, favorites stats, and draft storage.
- */
-export default function ProfilePage({ onReplaySplash }) {
-  const [profile, setProfile] = useState(() => userService.getUserProfile())
-  const [username, setUsername] = useState(profile.username || 'Shooter')
-  const [bio, setBio] = useState(profile.bio || '')
-  const [avatar, setAvatar] = useState(profile.avatar || null)
-  const [copied, setCopied] = useState(false)
-  const [feedback, setFeedback] = useState('')
-
-  const { favorites } = useFavorites()
-  const [draftCount] = useState(getActiveDraftCount)
-
-  const handleCopyId = () => {
-    if (profile.userId) {
-      navigator.clipboard.writeText(profile.userId)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
-  }
-
-  const handleAvatarChange = (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-
-    if (file.size > 2 * 1024 * 1024) {
-      setFeedback('Avatar image must be under 2MB.')
-      setTimeout(() => setFeedback(''), 3000)
-      return
-    }
-
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      const base64 = event.target.result
-      setAvatar(base64)
-      userService.updateAvatar(base64)
-      setFeedback('Avatar updated.')
-      setTimeout(() => setFeedback(''), 3000)
-    }
-    reader.readAsDataURL(file)
-  }
-
-  const handleSaveProfile = (e) => {
-    e.preventDefault()
-    const updated = {
-      ...profile,
-      username: username.trim() || 'Shooter',
-      bio: bio.trim(),
-      avatar,
-    }
-    const result = userService.saveUserProfile(updated)
-    if (result.success) {
-      setProfile(result.data)
-      setFeedback('Profile successfully updated.')
-      setTimeout(() => setFeedback(''), 3000)
-    } else {
-      setFeedback('Failed to save profile.')
-    }
-  }
-
-  return (
-    <div className="profile-page">
-      <section className="masthead" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          <h1 className="display">Operator Profile</h1>
-          <p className="lede">
-            Operator credentials, procurement statistics, and armorer details.
-          </p>
-        </div>
-        {onReplaySplash && (
-          <button
-            type="button"
-            className="btn btn--outline btn--sm"
-            onClick={onReplaySplash}
-            title="Replay introductory splash animation"
-          >
-            <Play size={14} /> Replay Intro
-          </button>
-        )}
-      </section>
-
-      {feedback && (
-        <div className="toast toast--success">
-          <Check size={18} /> {feedback}
-        </div>
-      )}
-
-      {/* Operator Card */}
-      <div className="profile-card">
-        <div className="profile-card-top">
-          <div className="avatar-wrap">
-            {avatar ? (
-              <img src={avatar} alt={profile.username} className="avatar-img" />
-            ) : (
-              <div className="avatar-placeholder">
-                <Shield size={36} stroke="var(--brass)" />
-              </div>
-            )}
-            <label htmlFor="avatar-file-input" className="avatar-upload-btn" title="Upload avatar">
-              <Camera size={14} />
-              <input
-                id="avatar-file-input"
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarChange}
-                className="hidden-file-input"
-              />
-            </label>
-          </div>
-
-          <div className="profile-identity">
-            <h2 className="display">{profile.username || 'Shooter'}</h2>
-            <div className="profile-id-row">
-              <span className="mono-badge">{profile.userId}</span>
-              <button
-                type="button"
-                className="icon-btn"
-                onClick={handleCopyId}
-                title="Copy User ID to clipboard"
-              >
-                {copied ? <Check size={14} color="var(--brass)" /> : <Copy size={14} />}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="profile-stats">
-          <div className="stat-item">
-            <Heart size={20} className="stat-icon" stroke="var(--brass)" />
-            <div className="stat-val">{favorites.length}</div>
-            <div className="stat-label">Procurement Favorites</div>
-          </div>
-          <div className="stat-item">
-            <FileText size={20} className="stat-icon" stroke="var(--steel)" />
-            <div className="stat-val">{draftCount}</div>
-            <div className="stat-label">Saved Offline Drafts</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Profile Form */}
-      <form onSubmit={handleSaveProfile} className="profile-form">
-        <h3 className="section-title">Armorer Details</h3>
-
-        <div className="form-group">
-          <label htmlFor="prof-name" className="form-label">
-            Callsign / Operator Alias
-          </label>
-          <input
-            id="prof-name"
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="e.g. Operator Delta, Master Gunsmith"
-            className="form-input"
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="prof-bio" className="form-label">
-            Armory Notes / Station Bio
-          </label>
-          <textarea
-            id="prof-bio"
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            placeholder="Qualifications, preferred calibers, unit assignment..."
-            rows={3}
-            className="form-textarea"
-          />
-        </div>
-
-        <button type="submit" className="btn btn--primary">
-          <Save size={16} /> Save Armorer Profile
-        </button>
-      </form>
-    </div>
-  )
+export default function ProfilePage({onReplaySplash,onNavigate}){
+ const user=useAuth(),{favorites}=useFavorites()
+ const [message,setMessage]=useState(''),[busy,setBusy]=useState(false),[register,setRegister]=useState(false)
+ const [avatar,setAvatar]=useState(()=>userService.getUserProfile().avatar)
+ const profile=useQuery({queryKey:['profile',user?.id],queryFn:fetchProfile,enabled:!!user&&!!accountClient})
+ const drafts=getAllDraftIds().map(id=>({id,...loadDraft(id)}))
+ async function authenticate(e){
+  e.preventDefault();setBusy(true);setMessage('')
+  const fields=new FormData(e.currentTarget)
+  const credentials={email:String(fields.get('email')).trim(),password:String(fields.get('password'))}
+  try{
+   if(!accountClient)throw new Error('Database akun belum dikonfigurasi.')
+   const result=register?await accountClient.auth.signUp(credentials):await accountClient.auth.signInWithPassword(credentials)
+   if(result.error)throw result.error
+   setMessage(register?'Akun dibuat. Periksa email konfirmasi jika diminta, lalu login di halaman ini.':'Login berhasil.')
+  }catch(error){setMessage(error.message)}finally{setBusy(false)}
+ }
+ function changeAvatar(e){
+  const file=e.target.files[0]
+  if(!file)return
+  if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>2*1024*1024){setMessage('Gunakan JPG, PNG atau WebP maksimal 2 MB.');return}
+  const reader=new FileReader()
+  reader.onload=()=>{const result=userService.updateAvatar(reader.result);if(result.success)setAvatar(reader.result);else setMessage(result.message)}
+  reader.onerror=()=>setMessage('Gambar tidak dapat dibaca.')
+  reader.readAsDataURL(file)
+ }
+ return <section className="profile-page"><section className="masthead"><h1 className="display">Operator Profile</h1><p className="lede">Profil pengguna dan pengaturan aplikasi.</p>
+ <button className="btn btn--outline" onClick={onReplaySplash}><Play size={14}/> Replay Intro</button></section>
+ {message&&<p role="status">{message}</p>}
+ <div className="profile-card"><div className="profile-card-top"><div className="avatar-wrap">
+ {avatar?<img className="avatar-img" src={avatar} alt="Avatar pengguna"/>:<div className="avatar-placeholder"><Shield size={36}/></div>}
+ <label className="avatar-upload-btn" title="Upload avatar"><Camera size={14}/><input type="file" accept="image/jpeg,image/png,image/webp" className="hidden-file-input" onChange={changeAvatar}/></label></div>
+ <div className="profile-identity"><h2>{profile.data?.username||userService.getUserProfile().username}</h2><p>{profile.data?.bio||(!user?userService.getUserProfile().bio:'')}</p></div></div>
+ <div className="profile-stats"><div><strong>{favorites.length}</strong><p>Favorites</p></div><div><strong>{drafts.length}</strong><p>Saved Drafts</p></div></div>
+ {profile.isLoading&&user&&<p>Memuat profil database…</p>}{profile.error&&<p role="alert">{profile.error.message}</p>}
+ {user&&<><button className="btn btn--primary" onClick={()=>onNavigate('EditProfile')}>Edit Profile</button><button className="btn btn--outline" onClick={async()=>{const result=await accountClient.auth.signOut();if(result.error)setMessage(result.error.message)}}>Logout</button></>}</div>
+ {!user&&<form className="profile-form" onSubmit={authenticate}><h2>{register?'Daftar akun':'Login untuk menyimpan profil ke database'}</h2>
+ <label>Email<input className="form-input" type="email" name="email" required autoComplete="email"/></label>
+ <label>Password<input className="form-input" type="password" name="password" required minLength={8} autoComplete={register?'new-password':'current-password'}/></label>
+ <button className="btn btn--primary" disabled={busy}>{busy?'Memproses…':register?'Daftar':'Login'}</button><button type="button" className="btn btn--outline" onClick={()=>setRegister(!register)}>{register?'Sudah punya akun':'Buat akun'}</button></form>}
+ <section className="profile-card"><h2>Draft saya</h2><p>{user?'Draft lokal milik akun yang sedang login.':'Draft lokal pada sesi browser ini. Login untuk memisahkan draft berdasarkan akun.'}</p>
+ {!drafts.length&&<p>Belum ada draft.</p>}{drafts.map(d=><article key={d.id}><h3>{d.formData?.name||'Tanpa judul'}</h3><p>{d.savedAt?new Date(d.savedAt).toLocaleString('id-ID'):''}</p><p>{d.formData?.description}</p>
+ <button className="btn btn--outline" onClick={()=>onNavigate(d.id==='create'?'Create':'Edit',d.id==='create'?undefined:{id:d.id})}>Buka draft</button></article>)}</section>
+ <section className="profile-card"><h2>Informasi</h2><button className="btn btn--outline" onClick={()=>onNavigate('About')}>About</button><button className="btn btn--outline" onClick={()=>onNavigate('Contact')}>Contact</button></section></section>
 }
