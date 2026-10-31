@@ -135,3 +135,31 @@ konfigurasi proyek ini.
 
 Pengembangan ini tidak menambahkan share tautan produk, arsip katalog, CRUD/vote
 review tambahan, keranjang, atau checkout pemesanan senjata api.
+
+## Draft database dan arsip draft
+
+Pada Profile, pengguna yang login dapat menyinkronkan draft perangkat ke tabel
+account_drafts melalui tombol Sinkronkan draft ke database. Autosave pada form
+tetap menyimpan ke perangkat; sinkronisasi database merupakan tindakan terpisah
+yang menampilkan status berhasil atau error. Draft database dapat dibuka pada
+perangkat lain setelah login dengan akun yang sama.
+
+Arsipkan draft menandai archived_at pada database sebelum memperbarui perangkat.
+Pulihkan draft mengosongkan penanda tersebut. Data arsip tidak masuk daftar aktif.
+Draft tanpa login hanya diarsipkan pada perangkat. Tidak ada tombol hapus permanen;
+role authenticated juga tidak memperoleh privilege DELETE pada account_drafts.
+
+RPC save_account_draft mengambil owner dari auth.uid(), menerapkan RLS,
+membatasi payload 1 MB, dan menolak penimpaan oleh timestamp versi yang lebih lama.
+Aplikasi menolak penggunaan hasil request jika akun berubah saat request berjalan.
+Draft legacy tanpa akun tetap disimpan pada perangkat dan tidak otomatis
+dipindahkan ke akun login.
+
+Migration: supabase/migrations/20261031_account_drafts.sql.
+Uji database: supabase/tests/account_drafts_rls.sql. Test dijalankan dalam transaksi
+dan diakhiri ROLLBACK. Hasil langsung di Supabase: PASS untuk isolasi akun,
+pemalsuan pemilik, perlindungan versi lama, arsip/pemulihan, dan penolakan DELETE.
+
+Batas pengujian: browser tanpa login sudah diperiksa. Pengujian database memakai
+dua identitas uji dalam transaksi; alur login dan sinkronisasi melalui akun
+pengguna asli belum diverifikasi karena sesi aplikasi masih logout.

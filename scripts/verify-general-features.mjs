@@ -24,6 +24,33 @@ try{
  await profiles.saveUserProfile({username:'Member',bio:'Saved'})
  assert.equal(JSON.parse(calls.at(-1).body).id,'11111111-1111-4111-8111-111111111111')
  await assert.rejects(()=>profiles.saveUserProfile({username:'x',bio:''}),/Nama/)
+
+ const draftsApi=await server.ssrLoadModule('/src/services/accountDraftService.js')
+ const owner='11111111-1111-4111-8111-111111111111'
+ const draftCalls=[]
+ client.rest.fetch=async(url,options)=>{
+  draftCalls.push({url:String(url),...options})
+  const body=options.body?JSON.parse(options.body):{}
+  const row={owner_id:owner,draft_id:body.p_draft_id||'create',payload:body.p_payload||{formData:{name:'Database draft'}},archived_at:body.p_archived_at||null,updated_at:body.p_updated_at||'2026-10-31T10:00:00Z'}
+  return new Response(JSON.stringify(String(url).includes('/rpc/')?row:[row]),{status:200,headers:{'Content-Type':'application/json'}})
+ }
+ const archived=await draftsApi.persistAccountDraft({id:'create',formData:{name:'Private draft'},savedAt:'2026-10-31T10:00:00Z'},'2026-10-31T10:00:00Z',owner)
+ assert.ok(draftCalls.at(-1).url.includes('/rpc/save_account_draft'))
+ assert.equal(archived.archivedAt,'2026-10-31T10:00:00Z')
+ assert.equal(JSON.parse(draftCalls.at(-1).body).p_owner_id,undefined)
+ await draftsApi.persistAccountDraft({...archived,savedAt:'2026-10-31T10:01:00Z'},null,owner)
+ assert.equal(JSON.parse(draftCalls.at(-1).body).p_archived_at,null)
+ const listed=await draftsApi.listAccountDrafts(owner)
+ assert.ok(draftCalls.at(-1).url.includes('owner_id=eq.'+owner))
+ assert.equal(listed[0].formData.name,'Database draft')
+ await assert.rejects(()=>draftsApi.persistAccountDraft({id:'create'},null,'other-user'),/Sesi/)
+ await assert.rejects(()=>draftsApi.persistAccountDraft({id:'invalid/id'}),/ID/)
+ await assert.rejects(()=>draftsApi.persistAccountDraft({id:'create',text:'x'.repeat(1048577)}),/1 MB/)
+ const merged=draftsApi.mergeDraftRecords(
+  [{id:'create',savedAt:'2026-10-31T09:00:00Z',archivedAt:null}],
+  [{id:'create',savedAt:'2026-10-31T10:00:00Z',archivedAt:'2026-10-31T10:00:00Z'}])
+ assert.ok(merged[0].archivedAt)
+ console.log('PASS database drafts: RPC save/restore, owner filtering, session-change guard, size limit, newest-version merge')
  client.auth.getUser=async()=>({data:{user:null},error:null})
  await assert.rejects(()=>profiles.fetchProfile(),/login/)
  console.log('PASS profile: owner from session, validation, guest access rejected')
@@ -38,5 +65,14 @@ try{
  globalThis.testOwner={id:'B'};assert.equal(draft.loadDraft('create'),null);assert.equal(draft.getAllDraftIds().length,0)
  draft.saveDraft({name:'Private B'},'create');draft.clearAllDrafts()
  globalThis.testOwner={id:'A'};assert.equal(draft.loadDraft('create').name,'Private A')
+
+ draft.archiveLocalDraft('create',true)
+ assert.equal(draft.loadDraft('create'),null)
+ assert.equal(draft.getAllDraftIds().length,0)
+ assert.equal(draft.getDraftRecords(true)[0].name,'Private A')
+ assert.ok(draft.getDraftRecords(true)[0].archivedAt)
+ draft.archiveLocalDraft('create',false)
+ assert.equal(draft.loadDraft('create').name,'Private A')
+ console.log('PASS local draft archives: hidden from active list, data retained, restoration')
  console.log('PASS drafts: legacy device data preserved; A/B account isolation; clear own drafts only')
 }finally{client?.auth.stopAutoRefresh();await server.close();delete globalThis.localStorage;delete globalThis.testOwner}

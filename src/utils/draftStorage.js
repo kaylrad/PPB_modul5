@@ -25,7 +25,7 @@ export const saveDraft = (draftData, draftId = 'create') => {
   try {
     const key = `${ownerPrefix()}${draftId}`
     const ts = new Date().toISOString()
-    localStorage.setItem(key, JSON.stringify({ ...draftData, savedAt: ts }))
+    localStorage.setItem(key, JSON.stringify({ ...draftData, archivedAt: null, savedAt: ts }))
     localStorage.setItem(`${key}${TS_SUFFIX}`, ts)
     return true
   } catch {
@@ -37,7 +37,7 @@ export const saveDraft = (draftData, draftId = 'create') => {
  * Load a previously saved draft.
  * @returns {Object|null}
  */
-export const loadDraft = (draftId = 'create') => {
+const readStoredDraft = (draftId = 'create') => {
   try {
     const raw = localStorage.getItem(`${ownerPrefix()}${draftId}`)
     const legacy = !currentUser() ? localStorage.getItem(PREFIX + draftId) : null
@@ -47,19 +47,30 @@ export const loadDraft = (draftId = 'create') => {
   }
 }
 
+export const loadDraft = (id = 'create') => {
+ const record=readStoredDraft(id)
+ return record?.archivedAt ? null : record
+}
+export const cacheDraft = record => {
+ try {
+  const key=ownerPrefix()+record.id
+  const existing=JSON.parse(localStorage.getItem(key)||'null')
+  if(existing?.savedAt&&record.savedAt&&Date.parse(existing.savedAt)>Date.parse(record.savedAt))return true
+  localStorage.setItem(key,JSON.stringify(record))
+  localStorage.setItem(key+TS_SUFFIX,record.savedAt||new Date().toISOString())
+  return true
+ }catch{return false}
+}
+export const archiveLocalDraft = (id,archived=true) => {
+ const record=readStoredDraft(id)
+ if(!record)return false
+ return cacheDraft({...record,id,archivedAt:archived?new Date().toISOString():null,savedAt:new Date().toISOString()})
+}
+
 /**
  * Remove a draft and its timestamp from storage.
  */
-export const deleteDraft = (draftId = 'create') => {
-  try {
-    const key = `${ownerPrefix()}${draftId}`
-    localStorage.removeItem(key)
-    localStorage.removeItem(`${key}${TS_SUFFIX}`)
-    return true
-  } catch {
-    return false
-  }
-}
+export const deleteDraft = (draftId = 'create') => archiveLocalDraft(draftId,true)
 
 /**
  * Check whether a draft exists.
@@ -102,7 +113,7 @@ export const formatDraftTime = (timestamp) => {
 /**
  * Return all existing draft ids.
  */
-export const getAllDraftIds = () => {
+const allStoredIds = () => {
   try {
     const owned = Object.keys(localStorage)
       .filter(k => k.startsWith(ownerPrefix()) && !k.endsWith(TS_SUFFIX))
@@ -116,6 +127,11 @@ export const getAllDraftIds = () => {
     return []
   }
 }
+
+export const getDraftRecords = (includeArchived=false) => allStoredIds()
+ .map(id=>({...readStoredDraft(id),id,source:'local'}))
+ .filter(record=>includeArchived||!record.archivedAt)
+export const getAllDraftIds = () => getDraftRecords().map(record=>record.id)
 
 /**
  * Remove every gun draft from storage.
